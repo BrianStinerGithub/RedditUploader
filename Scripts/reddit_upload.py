@@ -1,6 +1,7 @@
 import argparse
 import os
 from datetime import datetime
+from Scripts.config import VID_EXTENTIONS
 from convert import convertFile
 import config as c
 import praw
@@ -17,7 +18,7 @@ def apiSetup():
     print("Logged in to Imgur as: "+str(imgur.get_account(username).id))
 
 def interpretTags(tags):
-    # In the config you'll have a dictionary of keys to a string list of subreddits
+    # In the config you'll have a dictionary of keys to a string list of subreddits names
     subreddits = list(c.DEFAULT)
     for tag in tags.split(','):
         if tag in c.CATEGORIES.keys():
@@ -35,7 +36,8 @@ def upload_image(file, tags, title, description=None):
     print(interpretTags(tags))
     subreddits = [reddit.subreddit(a) for a in interpretTags(tags) if a != '']
     config = {'name': title,'title': title,'description': description}
-
+    if file.endswith(c.VID_EXTENTIONS):
+        convertFile(file)
     if file.endswith(c.FILE_EXTENSIONS):
 
         print("Uploading Image... ")
@@ -56,7 +58,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--file', type=str, help='The path to the image or gif to upload')
     parser.add_argument('-s', '--subreddits', type=str, help='The list of categories and/or subreddits to post to')
     parser.add_argument('-t', '--title', type=str, help='The title of the post')
-    parser.add_argument('-d', '--description', type=str, default="", help='The description of the post')
+    parser.add_argument('-d', '--description', type=str, default=None, help='The description of the post')
     args = parser.parse_args()
     print(args) 
     file, tags, title, description = args.file, args.subreddits, args.title, args.description
