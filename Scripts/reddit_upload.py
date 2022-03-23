@@ -1,11 +1,19 @@
 import argparse
+from urllib import response
+import requests
 import os
 from datetime import datetime
-from Scripts.config import VID_EXTENTIONS
 from convert import convertFile
 import config as c
 import praw
+import hashlib
+
 from imgurpython import ImgurClient
+    
+def uploadRedGifs(file):
+    md5file = hashlib.md5(open(file, 'rb').read()).hexdigest()
+    response = requests.post(url='api.redgifs.com', auth=)
+    
 
 def apiSetup():
     # Login to Imgur and Reddit
@@ -16,6 +24,7 @@ def apiSetup():
     client_id, client_secret, username = c.IMGUR
     imgur = ImgurClient(client_id, client_secret)
     print("Logged in to Imgur as: "+str(imgur.get_account(username).id))
+    return reddit, imgur
 
 def interpretTags(tags):
     # In the config you'll have a dictionary of keys to a string list of subreddits names
@@ -31,26 +40,30 @@ def interpretTags(tags):
 
 def upload_image(file, tags, title, description=None):
 
+    base, ext = os.path.splitext(file)
     reddit, imgur = apiSetup()
 
     print(interpretTags(tags))
     subreddits = [reddit.subreddit(a) for a in interpretTags(tags) if a != '']
     config = {'name': title,'title': title,'description': description}
+
     if file.endswith(c.VID_EXTENTIONS):
         convertFile(file)
+        file = base+'.gif'
     if file.endswith(c.FILE_EXTENSIONS):
-
-        print("Uploading Image... ")
-        image = imgur.upload_from_path(file, config=config, anon=False)
-        print("On Imgur here: {0}".format(image['link']))
-
+        # print("Uploading Image... ")
+        # image = imgur.upload_from_path(file, config=config, anon=False)
+        # print("On Imgur here: {0}".format(image['link']))
         print("Posting to Reddit... ")
         for subreddit in subreddits:
-            post = subreddit.submission(image['link'], config=config, anon=False, nsfw=True)
-            print("On Reddit here: https://www.reddit.com/r/{0}/{1}".format(subreddit.display_name, post.id))      
-
+            try:
+                post = subreddit.submit(title, url='https://i.imgur.com/yOFO8pD.mp4', nsfw=True, resubmit=False)
+                print("On Reddit here: https://www.reddit.com/r/{0}/comments/{1}/{2}/".format( subreddit.display_name, post.id,"_".join(post.title.split()) ) )  
+            except praw.exceptions.APIException as e:
+                print(e)
+                print("Failed to post to {0}".format(subreddit.display_name))
     else:
-        print("File not uploadable. Image or GIF only.")
+        print("File not uploadable. Image or Video only.")
     print("Done.")
 
 if __name__ == "__main__":
