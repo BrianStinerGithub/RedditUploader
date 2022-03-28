@@ -10,9 +10,9 @@ import hashlib
 
 from imgurpython import ImgurClient
     
-def uploadRedGifs(file):
+def upload(file, api, auth0):
     md5file = hashlib.md5(open(file, 'rb').read()).hexdigest()
-    response = requests.post(url='api.redgifs.com', auth=)
+    response = requests.post(url=api, auth=auth0)
     
 
 def apiSetup():
@@ -51,13 +51,13 @@ def upload_image(file, tags, title, description=None):
         convertFile(file)
         file = base+'.gif'
     if file.endswith(c.FILE_EXTENSIONS):
-        # print("Uploading Image... ")
-        # image = imgur.upload_from_path(file, config=config, anon=False)
-        # print("On Imgur here: {0}".format(image['link']))
+        print("Uploading Image... ")
+        image = imgur.upload_from_path(file, config=config, anon=False)
+        print("On Imgur here: {0}".format(image['link']))
         print("Posting to Reddit... ")
         for subreddit in subreddits:
             try:
-                post = subreddit.submit(title, url='https://i.imgur.com/yOFO8pD.mp4', nsfw=True, resubmit=False)
+                post = subreddit.submit(title, url=image['link'], resubmit=False)
                 print("On Reddit here: https://www.reddit.com/r/{0}/comments/{1}/{2}/".format( subreddit.display_name, post.id,"_".join(post.title.split()) ) )  
             except praw.exceptions.APIException as e:
                 print(e)
