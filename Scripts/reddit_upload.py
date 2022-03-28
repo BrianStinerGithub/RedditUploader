@@ -5,15 +5,10 @@ import os
 from datetime import datetime
 from convert import convertFile
 import config as c
-import praw
 import hashlib
-
+import praw
 from imgurpython import ImgurClient
-    
-def uploadRedGifs(file):
-    md5file = hashlib.md5(open(file, 'rb').read()).hexdigest()
-    response = requests.post(url='api.redgifs.com', auth=)
-    
+     
 
 def apiSetup():
     # Login to Imgur and Reddit
@@ -28,7 +23,7 @@ def apiSetup():
 
 def interpretTags(tags):
     # In the config you'll have a dictionary of keys to a string list of subreddits names
-    subreddits = list(c.DEFAULT)
+    subreddits = list()
     for tag in tags.split(','):
         if tag in c.CATEGORIES.keys():
             subreddits+=list(c.CATEGORIES[tag])
@@ -47,21 +42,24 @@ def upload_image(file, tags, title, description=None):
     subreddits = [reddit.subreddit(a) for a in interpretTags(tags) if a != '']
     config = {'name': title,'title': title,'description': description}
 
-    if file.endswith(c.VID_EXTENTIONS):
-        convertFile(file)
-        file = base+'.gif'
-    if file.endswith(c.FILE_EXTENSIONS):
-        # print("Uploading Image... ")
-        # image = imgur.upload_from_path(file, config=config, anon=False)
-        # print("On Imgur here: {0}".format(image['link']))
+    if ext in c.FILE_EXTENSIONS or ext in c.VID_EXTENTIONS:
+        print("Uploading Image... ")
+        image = imgur.upload_from_path(file, config=config, anon=False)
+        print("On Imgur here: {0}".format(image['link']))
+
         print("Posting to Reddit... ")
         for subreddit in subreddits:
             try:
-                post = subreddit.submit(title, url='https://i.imgur.com/yOFO8pD.mp4', nsfw=True, resubmit=False)
+                post = subreddit.submit(title+' [OC]', url=image['link'], nsfw=True, resubmit=False)
                 print("On Reddit here: https://www.reddit.com/r/{0}/comments/{1}/{2}/".format( subreddit.display_name, post.id,"_".join(post.title.split()) ) )  
             except praw.exceptions.APIException as e:
                 print(e)
                 print("Failed to post to {0}".format(subreddit.display_name))
+        
+        try:
+            os.rename(file[2:], 'Picture/posted_'+image['id']+ext)
+        except FileNotFoundError:
+            print("file not found: {0}".format(file))   
     else:
         print("File not uploadable. Image or Video only.")
     print("Done.")
