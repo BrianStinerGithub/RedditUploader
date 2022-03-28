@@ -8,8 +8,11 @@ import config as c
 import hashlib
 import praw
 from imgurpython import ImgurClient
-     
 
+def upload(file, api, auth0):
+    md5file = hashlib.md5(open(file, 'rb').read()).hexdigest()
+    response = requests.post(url=api, auth=auth0)
+    
 def apiSetup():
     # Login to Imgur and Reddit
     client_id,client_secret,user_agent,username,password=c.REDDIT
@@ -50,7 +53,7 @@ def upload_image(file, tags, title, description=None):
         print("Posting to Reddit... ")
         for subreddit in subreddits:
             try:
-                post = subreddit.submit(title+' [OC]', url=image['link'], nsfw=True, resubmit=False)
+                post = subreddit.submit(title, url=image['link'], resubmit=False)
                 print("On Reddit here: https://www.reddit.com/r/{0}/comments/{1}/{2}/".format( subreddit.display_name, post.id,"_".join(post.title.split()) ) )  
             except praw.exceptions.APIException as e:
                 print(e)
