@@ -28,7 +28,7 @@ def interpretTags(tags):
     # In the config you'll have a dictionary of keys to a string list of subreddits names
     subreddits = list()
     for tag in tags.split(','):
-        if tag in c.CATEGORIES.keys():
+        if tag.lower() in c.CATEGORIES.keys():
             subreddits+=list(c.CATEGORIES[tag])
         elif tag in c.ALL:
             subreddits.append(tag)
@@ -38,6 +38,10 @@ def interpretTags(tags):
 
 def upload_image(file, tags, title, description=None):
 
+    link = None
+    if file[0:4] == 'http':
+        link = file
+        file = "temp.jpg"
     base, ext = os.path.splitext(file)
     reddit, imgur = apiSetup()
 
@@ -46,21 +50,26 @@ def upload_image(file, tags, title, description=None):
     config = {'name': title,'title': title,'description': description}
 
     if ext in c.FILE_EXTENSIONS or ext in c.VID_EXTENTIONS:
-        print("Uploading Image... ")
-        image = imgur.upload_from_path(file, config=config, anon=False)
-        print("On Imgur here: {0}".format(image['link']))
+        if link is None:
+            print("Uploading image")
+            image = imgur.upload_from_path(file, config=config, anon=True)
+            link = image['link']
+            print("Image uploaded: "+link)
 
         print("Posting to Reddit... ")
         for subreddit in subreddits:
             try:
-                post = subreddit.submit(title, url=image['link'], resubmit=False)
+                post = subreddit.submit(title, url=link, resubmit=False)
+                flairs = post.flair.choices()
+                for flair in flairs:
+                    print(f"{flair['flair_text']}\n  {flair['flair_template_id']}")
                 print("On Reddit here: https://www.reddit.com/r/{0}/comments/{1}/{2}/".format( subreddit.display_name, post.id,"_".join(post.title.split()) ) )  
             except praw.exceptions.APIException as e:
                 print(e)
                 print("Failed to post to {0}".format(subreddit.display_name))
         
         try:
-            os.rename(file[2:], 'Picture/posted_'+image['id']+ext)
+            os.rename(file[2:], 'Picture/posted_image'+ext)
         except FileNotFoundError:
             print("file not found: {0}".format(file))   
     else:
