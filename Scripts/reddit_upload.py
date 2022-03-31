@@ -7,6 +7,7 @@ from convert import convertFile
 import config as c
 import hashlib
 import praw
+import prawcore.exceptions
 from imgurpython import ImgurClient
 
 def upload(file, api, auth0):
@@ -39,14 +40,15 @@ def interpretTags(tags):
 def upload_image(file, tags, title, description=None):
 
     link = None
-    if file[0:4] == 'http':
+    if file[0:4] == 'http': 
         link = file
-        file = "temp.jpg"
+        file = "temp.jpg" 
     base, ext = os.path.splitext(file)
     reddit, imgur = apiSetup()
 
-    print(interpretTags(tags))
-    subreddits = [reddit.subreddit(a) for a in interpretTags(tags) if a != '']
+    subredditlist = interpretTags(tags)
+    print(subredditlist)
+    subreddits = [reddit.subreddit(a) for a in subredditlist if a != ''] # if a != '' is to prevent an error if your comfig.py lists contains blank spaces
     config = {'name': title,'title': title,'description': description}
 
     if ext in c.FILE_EXTENSIONS or ext in c.VID_EXTENTIONS:
@@ -67,11 +69,12 @@ def upload_image(file, tags, title, description=None):
             except praw.exceptions.APIException as e:
                 print(e)
                 print("Failed to post to {0}".format(subreddit.display_name))
+                print("Go to: https://www.reddit.com/r/{0}".format(subreddit.display_name))
         
         try:
-            os.rename(file[2:], 'Picture/posted_image'+ext)
+            os.remove(file)
         except FileNotFoundError:
-            print("file not found: {0}".format(file))   
+            print("file name wasn't there: {0}".format(file))   
     else:
         print("File not uploadable. Image or Video only.")
     print("Done.")
