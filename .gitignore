@@ -9,3 +9,4 @@ config.py
 *.JPG
 *.pyc
 *.gif
+*.storage

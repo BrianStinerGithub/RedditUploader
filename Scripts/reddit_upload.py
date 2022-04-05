@@ -1,18 +1,27 @@
 import argparse
 from urllib import response
+from xmlrpc.client import DateTime
 import requests
 import os
-from datetime import datetime
 from convert import convertFile
 import config as c
 import hashlib
+from threading import Thread
 import praw
 import prawcore.exceptions
 from imgurpython import ImgurClient
+from time import time
 
-def upload(file, api, auth0):
-    md5file = hashlib.md5(open(file, 'rb').read()).hexdigest()
-    response = requests.post(url=api, auth=auth0)
+def reddit_upload(sub, title, link, retry):
+    try:
+        post = sub.submit(title, url=link)
+        print("On Reddit here: https://www.reddit.com/r/{0}/comments/{1}/{2}/".format( sub.display_name, post.id,"_".join(post.title.split()) ) )  
+    except praw.exceptions.APIException as e:
+        print(e)
+        print("Failed to post to {0}".format(sub.display_name))
+        print("Go to: https://www.reddit.com/r/{0}".format(sub.display_name))
+        if retry > 0:
+            reddit_upload(sub, title, link, retry-1)
     
 def apiSetup():
     # Login to Imgur and Reddit
@@ -23,10 +32,11 @@ def apiSetup():
     client_id, client_secret, username = c.IMGUR
     imgur = ImgurClient(client_id, client_secret)
     print("Logged in to Imgur as: "+str(imgur.get_account(username).id))
+    print(f"{imgur.credits['ClientRemaining']} credits remaining")
     return reddit, imgur
 
 def interpretTags(tags):
-    # In the config you'll have a dictionary of keys to a string list of subreddits names
+    # In the config you'll have a dictionary of keys of subreddits names
     subreddits = list()
     for tag in tags.split(','):
         if tag.lower() in c.CATEGORIES.keys():
@@ -38,7 +48,6 @@ def interpretTags(tags):
     return subreddits
 
 def upload_image(file, tags, title, description=None):
-
     link = None
     if file[0:4] == 'http': 
         link = file
@@ -48,7 +57,7 @@ def upload_image(file, tags, title, description=None):
 
     subredditlist = interpretTags(tags)
     print(subredditlist)
-    subreddits = [reddit.subreddit(a) for a in subredditlist if a != ''] # if a != '' is to prevent an error if your comfig.py lists contains blank spaces
+    subreddits = [reddit.subreddit(a) for a in subredditlist if a != '']
     config = {'name': title,'title': title,'description': description}
 
     if ext in c.FILE_EXTENSIONS or ext in c.VID_EXTENTIONS:
@@ -59,20 +68,17 @@ def upload_image(file, tags, title, description=None):
             print("Image uploaded: "+link)
 
         print("Posting to Reddit... ")
+        threads = []
         for subreddit in subreddits:
-            try:
-                post = subreddit.submit(title, url=link, resubmit=False)
-                flairs = post.flair.choices()
-                for flair in flairs:
-                    print(f"{flair['flair_text']}\n  {flair['flair_template_id']}")
-                print("On Reddit here: https://www.reddit.com/r/{0}/comments/{1}/{2}/".format( subreddit.display_name, post.id,"_".join(post.title.split()) ) )  
-            except praw.exceptions.APIException as e:
-                print(e)
-                print("Failed to post to {0}".format(subreddit.display_name))
-                print("Go to: https://www.reddit.com/r/{0}".format(subreddit.display_name))
-        
+            t = Thread(target=reddit_upload, args=(subreddit,title, link, 1,))
+            t.start()
+            threads.append(t)
+        for t in threads:
+            t.join()
         try:
-            os.remove(file)
+            newname = 'Posts/redditpost_{0}.{1}'.format(time.time().format('%Y%m%d-%H%M%S'), ext)
+            os.rename(file, newname)
+            print("File renamed to: "+newname)
         except FileNotFoundError:
             print("file name wasn't there: {0}".format(file))   
     else:
