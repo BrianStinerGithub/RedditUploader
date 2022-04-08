@@ -76,7 +76,7 @@ def upload_image(file, tags, title, description=None):
         for t in threads:
             t.join()
         try:
-            newname = 'Posts/redditpost_{0}.{1}'.format(time.time().format('%Y%m%d-%H%M%S'), ext)
+            newname = 'Posts/redditpost_{0}.{1}'.format(time(), ext)
             os.rename(file, newname)
             print("File renamed to: "+newname)
         except FileNotFoundError:
